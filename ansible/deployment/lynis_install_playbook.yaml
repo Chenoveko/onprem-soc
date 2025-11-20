@@ -1,0 +1,24 @@
+---
+# Playbook to install Lynis security auditing tool from GitHub
+- name: Install Lynis from GitHub
+  hosts: probes
+  vars:
+    lynis_dest: /usr/local/Lynis
+    lynis_repo: "https://github.com/CISOfy/Lynis"
+    lynis_version: main
+
+  tasks:
+    # Clone Lynis repository
+    - name: Clone Lynis repository into /usr/local/Lynis
+      ansible.builtin.git:
+        repo: "{{ lynis_repo }}"
+        dest: "{{ lynis_dest }}"
+        version: "{{ lynis_version }}"
+        force: true
+
+    # Ensure Lynis main script is executable
+    - name: Ensure Lynis main script is executable
+      ansible.builtin.file:
+        path: "{{ lynis_dest }}/lynis"
+        mode: "0755"
+...

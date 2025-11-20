@@ -1,0 +1,27 @@
+---
+- name: Configure MOTD on Ubuntu probes
+  hosts: probes
+  vars:
+    motd_dev_net: "Welcome to Developer network probe\n"
+    motd_prod_net: "Welcome to Production network probe\n"
+
+  tasks:
+    - name: Configure a MOTD on Production network probes
+      ansible.builtin.copy:
+        content: "{{ motd_prod_net }}"
+        dest: /etc/motd
+      when: "'probes_prod_net' in group_names"
+      notify: MOTD changed
+
+    - name: Configure a MOTD on Development network probes
+      ansible.builtin.copy:
+        content: "{{ motd_dev_net }}"
+        dest: /etc/motd
+      when: "'probes_dev_net' in group_names"
+      notify: MOTD changed
+
+  handlers:
+    - name: MOTD changed
+      debug:
+        msg: "The MOTD was changed"
+...

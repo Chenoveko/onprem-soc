@@ -1,0 +1,9 @@
+# cat ips >> /etc/hosts
+
+# Probes Production Network
+10.0.0.15 probe1_prod_net
+10.0.0.20 probe2_prod_net
+
+# Probes Developer Network
+10.1.0.15 probe1_dev_net
+10.1.0.20 probe2_dev_net

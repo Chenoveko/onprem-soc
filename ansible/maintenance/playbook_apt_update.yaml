@@ -1,0 +1,22 @@
+---
+# Playbook update and upgrade packages on Ubuntu 24.04 hosts
+- name: Install essential security and monitoring tools
+  hosts: probes
+
+  tasks:
+    - name: Update all packages to their latest version
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+
+    # Clean retrieved APT packages that are no longer needed (cache only)
+    - name: Autoclean apt cache
+      ansible.builtin.apt:
+        autoclean: true
+
+    # Remove unused dependencies and purge their configuration files
+    - name: Autoremove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true  
+...

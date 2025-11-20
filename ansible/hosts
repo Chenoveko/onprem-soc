@@ -1,0 +1,28 @@
+[control]
+ubuntu-c ansible_connection=local # Run tasks locally without SSH
+
+[probes_prod_net]
+probe1_prod_net 
+probe2_prod_net 
+probe[3:5]_prod_net # Machine range from probe3_prod_net to probe5_prod_net
+
+[probes_prod_net:vars]
+ansible_user=root # Connect as root user
+
+[probes_dev_net]
+probe1_dev_net 
+probe2_dev_net:2222 # Connect on custom port
+
+[probes_dev_net:vars]
+ansible_become=true # Use sudo 
+ansible_become_pass=password # Sudo password
+
+[probes:children]
+probes_prod_net
+probes_dev_net
+
+[probes:vars]
+ansible_port=1234 # Connect on custom port
+
+[all:vars]
+ansible_port=2222 # Connect on custom port

@@ -1,0 +1,19 @@
+[probes_prod_net]
+probe[1:5]_prod_net # Production probes 1 to 5
+
+[probes_prod_net:vars]
+ansible_user=user # SSH user
+ansible_become=true # Enable sudo
+ansible_become_pass=user # Sudo password (consider using Vault)
+
+[probes_dev_net]
+probe[1:5]_dev_net # Developer probes 1 to 5
+
+[probes_dev_net:vars]
+ansible_user=user # SSH user
+ansible_become=true # Enable sudo
+ansible_become_pass=user # Sudo password (consider using Vault)
+
+[probes:children]
+probes_prod_net
+probes_dev_net

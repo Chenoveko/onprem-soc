@@ -1,0 +1,71 @@
+---
+# Playbook to install essential security and monitoring tools on Ubuntu 24.04 hosts
+- name: Install essential security and monitoring tools
+  hosts: probes
+  vars:
+    # List of packages to install (easy to extend in the future)
+    base_packages:
+      - git
+      - nmap
+      - auditd
+      - htop
+      - rsyslog
+      - tshark
+      - openvpn
+      - suricata
+      - suricata-update
+      - clamav
+      - clamav-freshclam
+      - clamav-daemon
+  pre_tasks:
+    - name: Check if system is Ubuntu Noble 24.04
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version == "24.04"
+          - ansible_lsb.codename == "noble"
+        fail_msg: "This playbook only supports Ubuntu 24.04 LTS (Noble)"
+        success_msg: "Host validated: Ubuntu Noble 24.04"
+
+  tasks:
+    # Refresh the APT package cache (if cache is older than 3600 seconds)
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    # Install all required packages defined in base_packages
+    # If any package is installed or upgraded, notify the Suricata restart handler
+    - name: Install required packages
+      ansible.builtin.apt:
+        name: "{{ base_packages }}"
+        state: present
+      notify:
+        - Restart suricata
+
+    # Ensure the Suricata service is enabled at boot and currently running
+    - name: Ensure Suricata service is enabled and running
+      ansible.builtin.systemd:
+        name: suricata
+        enabled: true
+        state: started
+
+    # Clean retrieved APT packages that are no longer needed (cache only)
+    - name: Autoclean apt cache
+      ansible.builtin.apt:
+        autoclean: true
+
+    # Remove unused dependencies and purge their configuration files
+    - name: Autoremove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true
+
+  handlers:
+    # Handler: executed only when notified by a task
+    # Restarts Suricata when related packages change
+    - name: Restart suricata
+      ansible.builtin.systemd:
+        name: suricata
+        state: restarted
+...

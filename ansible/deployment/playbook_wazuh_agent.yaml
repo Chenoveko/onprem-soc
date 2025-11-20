@@ -1,0 +1,41 @@
+---
+- name: Install and configure Wazuh agent
+  hosts: probes
+  user: root
+  gather_facts: false
+  vars:
+    wazuh_version: "4.9.2-1"
+    wazuh_manager_ip: "10.10.10.10"
+    wazuh_package: "/tmp/wazuh-agent_{{ wazuh_version }}_amd64.deb"
+    wazuh_url: "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_{{ wazuh_version }}_amd64.deb"
+
+  tasks:
+    - name: Download Wazuh agent package
+      ansible.builtin.get_url:
+        url: "{{ wazuh_url }}"
+        dest: "{{ wazuh_package }}"
+        mode: '0644'
+
+    - name: Install Wazuh agent package with dynamic agent name
+      ansible.builtin.command:
+        cmd: >
+          WAZUH_MANAGER='{{ wazuh_manager_ip }}'
+          WAZUH_AGENT_NAME='{{ inventory_hostname }}'
+          dpkg -i {{ wazuh_package }}
+      args:
+        creates: /var/ossec
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable Wazuh agent service
+      ansible.builtin.systemd:
+        name: wazuh-agent
+        enabled: yes
+
+    - name: Start Wazuh agent service
+      ansible.builtin.systemd:
+        name: wazuh-agent
+        state: started
+...

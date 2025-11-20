@@ -1,0 +1,135 @@
+---
+- name: Install and configure Maltrail on Ubuntu 24.04
+  hosts: all
+  become: yes
+  vars:
+    maltrail_dir: /opt/maltrail
+    maltrail_conf_dir: /etc/maltrail
+    maltrail_log_dir: /var/log/maltrail
+  tasks:
+
+    # -----------------------------
+    # 1) Installation dependencies
+    # -----------------------------
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - git
+          - python3
+          - python3-dev
+          - python3-pip
+          - python-is-python3
+          - libpcap-dev
+          - build-essential
+          - procps
+          - schedtool
+        state: present
+        update_cache: yes
+
+    - name: Install Python dependency (pcapy-ng)
+      ansible.builtin.pip:
+        name: pcapy-ng
+        executable: pip3
+
+    - name: Clone Maltrail repository
+      ansible.builtin.git:
+        repo: "https://github.com/stamparm/maltrail.git"
+        dest: "{{ maltrail_dir }}"
+        version: HEAD
+        depth: 1
+        force: yes
+
+    - name: Ensure Maltrail directory ownership
+      ansible.builtin.file:
+        path: "{{ maltrail_dir }}"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        recurse: yes
+
+    # -----------------------------
+    # 2) Working environment setup
+    # -----------------------------
+    - name: Create log and config directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: '0755'
+      loop:
+        - "{{ maltrail_log_dir }}"
+        - "{{ maltrail_conf_dir }}"
+
+    - name: Copy default configuration file
+      ansible.builtin.copy:
+        src: "{{ maltrail_dir }}/maltrail.conf"
+        dest: "{{ maltrail_conf_dir }}/maltrail.conf"
+        remote_src: yes
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_id }}"
+        mode: '0644'
+
+    # -----------------------------
+    # 3) Running environment setup
+    # -----------------------------
+    - name: Configure crontab for Maltrail server
+      ansible.builtin.cron:
+        name: "Autostart Maltrail server"
+        minute: "*/5"
+        job: "if [ -n \"$(ps -ef | grep -v grep | grep 'server.py')\" ]; then : ; else python3 {{ maltrail_dir }}/server.py -c {{ maltrail_conf_dir }}/maltrail.conf; fi"
+
+    - name: Configure crontab for server auto-update
+      ansible.builtin.cron:
+        name: "Maltrail server git update"
+        minute: "0"
+        hour: "1"
+        job: "cd {{ maltrail_dir }} && git pull"
+
+    - name: Configure crontab for Maltrail sensor
+      ansible.builtin.cron:
+        name: "Autostart Maltrail sensor"
+        minute: "*/1"
+        job: "if [ -n \"$(ps -ef | grep -v grep | grep 'sensor.py')\" ]; then : ; else python3 {{ maltrail_dir }}/sensor.py -c {{ maltrail_conf_dir }}/maltrail.conf; fi"
+
+    - name: Configure crontab for daily sensor restart
+      ansible.builtin.cron:
+        name: "Restart Maltrail daily"
+        minute: "2"
+        hour: "1"
+        job: "/usr/bin/pkill -f maltrail"
+
+    # -----------------------------
+    # 4) Systemd services
+    # -----------------------------
+    - name: Copy systemd service files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item | basename }}"
+        remote_src: yes
+      loop:
+        - "{{ maltrail_dir }}/maltrail-sensor.service"
+        - "{{ maltrail_dir }}/maltrail-server.service"
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Maltrail services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - maltrail-server.service
+        - maltrail-sensor.service
+
+    - name: Check Maltrail service status
+      ansible.builtin.command:
+        cmd: "systemctl status maltrail-server.service && systemctl status maltrail-sensor.service"
+      register: service_status
+      changed_when: false
+
+    - name: Display Maltrail service status
+      ansible.builtin.debug:
+        var: service_status.stdout
+...

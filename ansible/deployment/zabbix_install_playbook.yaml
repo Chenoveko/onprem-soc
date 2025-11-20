@@ -1,0 +1,35 @@
+- name: Install Zabbix Agent 2 and plugins 
+  hosts: probes
+  # Only run this play on Ubuntu 24.04 LTS (Noble Numbat) systems
+  when: 
+    ansible_distribution == "Ubuntu" and 
+    ansible_distribution_version == "24.04" and 
+    ansible_lsb.codename == "noble"
+    
+  tasks:
+    - name: Download Zabbix release package
+      ansible.builtin.get_url:
+        url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+        dest: "/tmp/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+        mode: '0644'
+
+    - name: Install Zabbix release package
+      ansible.builtin.apt:
+        deb: "/tmp/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+
+    - name: Update APT repositories
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Zabbix Agent 2
+      ansible.builtin.apt:
+        name: zabbix-agent2
+        state: present
+
+    - name: Install Zabbix Agent 2 database plugins
+      ansible.builtin.apt:
+        name:
+          - zabbix-agent2-plugin-mongodb
+          - zabbix-agent2-plugin-mssql
+          - zabbix-agent2-plugin-postgresql
+        state: present
