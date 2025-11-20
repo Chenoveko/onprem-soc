@@ -1,16 +1,23 @@
 ---
-- name: Install and configure Maltrail on Ubuntu 24.04
-  hosts: all
-  become: yes
+# Playbook to install Maltrail on Ubuntu probes and initial configuration
+- name: Install and configure Maltrail
+  hosts: probes
+  gather_facts: true
   vars:
     maltrail_dir: /opt/maltrail
     maltrail_conf_dir: /etc/maltrail
     maltrail_log_dir: /var/log/maltrail
+    maltrail_repo: "https://github.com/stamparm/maltrail.git"
+    maltrail_version: main
+  pre_tasks:
+    - name: Include system check tasks
+      ansible.builtin.include_tasks: check_system_playbook.yaml
   tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
 
-    # -----------------------------
-    # 1) Installation dependencies
-    # -----------------------------
     - name: Install required packages
       ansible.builtin.apt:
         name:
@@ -24,58 +31,54 @@
           - procps
           - schedtool
         state: present
-        update_cache: yes
 
-    - name: Install Python dependency (pcapy-ng)
+    - name: Install Python dependency for Maltrail
       ansible.builtin.pip:
         name: pcapy-ng
         executable: pip3
 
     - name: Clone Maltrail repository
       ansible.builtin.git:
-        repo: "https://github.com/stamparm/maltrail.git"
+        repo: "{{ maltrail_repo }}"
         dest: "{{ maltrail_dir }}"
-        version: HEAD
+        version: "{{ maltrail_version }}"
         depth: 1
-        force: yes
+        force: true
 
     - name: Ensure Maltrail directory ownership
       ansible.builtin.file:
         path: "{{ maltrail_dir }}"
-        owner: "{{ ansible_user_id }}"
-        group: "{{ ansible_user_id }}"
-        recurse: yes
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        recurse: true
 
-    # -----------------------------
-    # 2) Working environment setup
-    # -----------------------------
-    - name: Create log and config directories
+    - name: Create log and config directories for Maltrail
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ dir_path }}"
         state: directory
-        owner: "{{ ansible_user_id }}"
-        group: "{{ ansible_user_id }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0755'
       loop:
         - "{{ maltrail_log_dir }}"
         - "{{ maltrail_conf_dir }}"
+      loop_control:
+        loop_var: dir_path
 
     - name: Copy default configuration file
       ansible.builtin.copy:
         src: "{{ maltrail_dir }}/maltrail.conf"
         dest: "{{ maltrail_conf_dir }}/maltrail.conf"
-        remote_src: yes
-        owner: "{{ ansible_user_id }}"
-        group: "{{ ansible_user_id }}"
+        remote_src: true
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
         mode: '0644'
 
-    # -----------------------------
-    # 3) Running environment setup
-    # -----------------------------
     - name: Configure crontab for Maltrail server
       ansible.builtin.cron:
         name: "Autostart Maltrail server"
         minute: "*/5"
+        user: root
         job: "if [ -n \"$(ps -ef | grep -v grep | grep 'server.py')\" ]; then : ; else python3 {{ maltrail_dir }}/server.py -c {{ maltrail_conf_dir }}/maltrail.conf; fi"
 
     - name: Configure crontab for server auto-update

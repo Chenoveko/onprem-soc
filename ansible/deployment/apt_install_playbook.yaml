@@ -2,6 +2,7 @@
 # Playbook to install essential security and monitoring tools on Ubuntu 24.04 hosts
 - name: Install essential security and monitoring tools
   hosts: probes
+  gather_facts: true
   vars:
     # List of packages to install (easy to extend in the future)
     base_packages:
@@ -18,14 +19,8 @@
       - clamav-freshclam
       - clamav-daemon
   pre_tasks:
-    - name: Check if system is Ubuntu Noble 24.04
-      ansible.builtin.assert:
-        that:
-          - ansible_distribution == "Ubuntu"
-          - ansible_distribution_version == "24.04"
-          - ansible_lsb.codename == "noble"
-        fail_msg: "This playbook only supports Ubuntu 24.04 LTS (Noble)"
-        success_msg: "Host validated: Ubuntu Noble 24.04"
+    - name: Include system check tasks
+      ansible.builtin.include_tasks: check_system_playbook.yaml
 
   tasks:
     # Refresh the APT package cache (if cache is older than 3600 seconds)

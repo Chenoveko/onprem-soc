@@ -1,35 +1,55 @@
-- name: Install Zabbix Agent 2 and plugins 
+---
+# Playbook to install Zabbix on Ubuntu probes
+- name: Install Zabbix Agent 2 and plugins
   hosts: probes
-  # Only run this play on Ubuntu 24.04 LTS (Noble Numbat) systems
-  when: 
-    ansible_distribution == "Ubuntu" and 
-    ansible_distribution_version == "24.04" and 
-    ansible_lsb.codename == "noble"
-    
+  gather_facts: true
+  vars:
+    zabbix_version: "7.0"
+    zabbix_server_ip: "10.10.10.10"
+    zabbix_package: "/tmp/zabbix-agent2_{{ zabbix_version }}_amd64.deb"
+    zabbix_url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-agent2/zabbix-agent2_{{ zabbix_version }}_amd64.deb"
+  pre_tasks:
+    - name: Include system check tasks
+      ansible.builtin.include_tasks: check_system_playbook.yaml
+
   tasks:
     - name: Download Zabbix release package
       ansible.builtin.get_url:
-        url: "https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
-        dest: "/tmp/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+        url: "{{ zabbix_url }}"
+        dest: "{{ zabbix_package }}"
         mode: '0644'
 
-    - name: Install Zabbix release package
+    - name: Install Zabbix repository
       ansible.builtin.apt:
-        deb: "/tmp/zabbix-release_latest_7.0+ubuntu24.04_all.deb"
+        deb: "{{ zabbix_package }}"
 
     - name: Update APT repositories
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
 
-    - name: Install Zabbix Agent 2
+    - name: Install Zabbix agent 2
       ansible.builtin.apt:
         name: zabbix-agent2
         state: present
 
-    - name: Install Zabbix Agent 2 database plugins
+    - name: Install Zabbix agent 2 plugins
       ansible.builtin.apt:
         name:
           - zabbix-agent2-plugin-mongodb
           - zabbix-agent2-plugin-mssql
           - zabbix-agent2-plugin-postgresql
         state: present
+
+    - name: Configure Zabbix server IP in Zabbix agent 2 configuration
+      ansible.builtin.lineinfile:
+        path: /etc/zabbix/zabbix_agent2.conf
+        regexp: '^Server='
+        line: "Server={{ zabbix_server_ip }}"
+        state: present
+
+    - name: Start and enable Zabbix agent 2 service
+      ansible.builtin.systemd:
+        name: zabbix-agent2
+        state: restarted
+        enabled: true
+...

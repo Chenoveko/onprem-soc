@@ -1,13 +1,16 @@
 ---
-- name: Install and configure Wazuh agent
+# Playbook to install Wazuh agent on Ubuntu probes and initial configuration
+- name: Install and initial configuration Wazuh agent
   hosts: probes
-  user: root
-  gather_facts: false
+  gather_facts: true
   vars:
     wazuh_version: "4.9.2-1"
     wazuh_manager_ip: "10.10.10.10"
     wazuh_package: "/tmp/wazuh-agent_{{ wazuh_version }}_amd64.deb"
     wazuh_url: "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_{{ wazuh_version }}_amd64.deb"
+  pre_tasks:
+    - name: Include system check tasks
+      ansible.builtin.include_tasks: check_system_playbook.yaml
 
   tasks:
     - name: Download Wazuh agent package
@@ -18,24 +21,20 @@
 
     - name: Install Wazuh agent package with dynamic agent name
       ansible.builtin.command:
-        cmd: >
-          WAZUH_MANAGER='{{ wazuh_manager_ip }}'
-          WAZUH_AGENT_NAME='{{ inventory_hostname }}'
-          dpkg -i {{ wazuh_package }}
+        cmd: dpkg -i {{ wazuh_package }}
       args:
         creates: /var/ossec
+      environment:
+        WAZUH_MANAGER: "{{ wazuh_manager_ip }}"
+        WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
 
     - name: Reload systemd daemon
       ansible.builtin.systemd:
-        daemon_reload: yes
+        daemon_reload: true
 
-    - name: Enable Wazuh agent service
-      ansible.builtin.systemd:
-        name: wazuh-agent
-        enabled: yes
-
-    - name: Start Wazuh agent service
+    - name: Start and enable Wazuh agent service
       ansible.builtin.systemd:
         name: wazuh-agent
         state: started
+        enabled: true
 ...

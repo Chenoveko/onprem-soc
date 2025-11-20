@@ -2,11 +2,10 @@
 # Playbook to install Zeek on Ubuntu probes
 - name: Install Zeek from official repository
   hosts: probes
-  # Only run this play on Ubuntu 24.04 LTS (Noble Numbat) systems
-  when: 
-    ansible_distribution == "Ubuntu" and 
-    ansible_distribution_version == "24.04" and 
-    ansible_lsb.codename == "noble"
+  gather_facts: true
+  pre_tasks:
+    - name: Include system check tasks
+      ansible.builtin.include_tasks: check_system_playbook.yaml
 
   tasks:
     - name: Add Zeek repository
@@ -22,10 +21,17 @@
 
     - name: Update APT repositories
       ansible.builtin.apt:
-          update_cache: yes
+        update_cache: true
 
     - name: Install Zeek
       ansible.builtin.apt:
         name: zeek
-        state: latest
+        state: present
+
+    - name: Add /opt/zeek/bin to the system PATH
+      ansible.builtin.lineinfile:
+        path: /etc/profile
+        line: 'export PATH=$PATH:/opt/zeek/bin'
+        state: present
+        insertafter: EOF
 ...

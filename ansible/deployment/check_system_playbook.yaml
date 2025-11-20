@@ -1,0 +1,8 @@
+- name: Check if system is Ubuntu Noble 24.04
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+      - ansible_distribution_version == "24.04"
+      - ansible_lsb.codename == "noble"
+    fail_msg: "This playbook only supports Ubuntu 24.04 LTS (Noble)"
+    success_msg: "Host validated: Ubuntu Noble 24.04"

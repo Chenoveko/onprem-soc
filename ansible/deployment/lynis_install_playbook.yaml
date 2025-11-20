@@ -2,6 +2,7 @@
 # Playbook to install Lynis security auditing tool from GitHub
 - name: Install Lynis from GitHub
   hosts: probes
+  gather_facts: false
   vars:
     lynis_dest: /usr/local/Lynis
     lynis_repo: "https://github.com/CISOfy/Lynis"
