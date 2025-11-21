@@ -1,0 +1,25 @@
+FROM alpine:latest
+
+# Install OpenSSH server
+RUN apk update && \
+    apk add --no-cache openssh
+
+# Create a new user 'remote_user' and set its password.
+# Then create the .ssh directory with proper permissions.
+RUN adduser -D remote_user && \
+    echo "remote_user:1234" | chpasswd && \
+    mkdir /home/remote_user/.ssh && \
+    chmod 700 /home/remote_user/.ssh
+
+# Copy the public key into the authorized_keys file
+COPY remote-key.pub /home/remote_user/.ssh/authorized_keys
+
+# Set correct ownership and permissions for SSH key access
+RUN chown -R remote_user:remote_user /home/remote_user/.ssh && \
+    chmod 600 /home/remote_user/.ssh/authorized_keys
+
+# Generate SSH host keys
+RUN ssh-keygen -A
+
+# Start the SSH daemon in the foreground with verbose output to stderr
+CMD /usr/sbin/sshd -D -e

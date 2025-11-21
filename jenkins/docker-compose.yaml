@@ -1,0 +1,33 @@
+services:
+  jenkins:
+    container_name: jenkins  # Name of the Jenkins container for easy reference
+    image: jenkins/jenkins    # Official Jenkins Docker image
+    ports:
+      - "8080:8080"  # Map port 8080 on the host to port 8080 in the container (Jenkins web UI)
+    volumes:
+      - $PWD/jenkins_home:/var/jenkins_home  # Persist Jenkins data by mounting a local directory
+    networks:
+      - net  # Connect Jenkins to the custom Docker network for communication with other containers
+
+  remote_host:
+    container_name: remote-host  # Name of the remote host container
+    image: remote-host           # Use the remote-host Docker image
+    build:
+      context: alpine  # Build the remote_host image from the 'alpine' directory
+    networks:
+      - net  # Connect this container to the same network as Jenkins for inter-container communication
+
+  db_hosts:
+    container_name: db  # Name of the database container for easy reference
+    image: mysql        # Official MySQL image
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234  # Root password for MySQL
+    volumes:
+      - $PWD/db_data:/var/lib/mysql  # Persist MySQL data by mounting a local directory
+    networks:
+      - net  # Connect the database container to the same network as Jenkins and remote_host
+
+# Define a custom Docker network for inter-container communication
+networks:
+  net:  # Custom network that allows containers to communicate using container names
+
