@@ -1,8 +1,9 @@
+# Start from the official Alpine base image
 FROM alpine:latest
 
-# Install OpenSSH server
+# Install OpenSSH server, mariadb-client, aws-cli, and nano 
 RUN apk update && \
-    apk add --no-cache openssh
+    apk add --no-cache openssh mariadb-client aws-cli nano
 
 # Create a new user 'remote_user' and set its password.
 # Then create the .ssh directory with proper permissions.
