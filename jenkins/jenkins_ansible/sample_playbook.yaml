@@ -1,0 +1,18 @@
+# Sample Ansible playbook to run on the remote host "test1"
+- name: Sample playbook
+  hosts: test1           # Specifies the target host(s) for this playbook
+  gather_facts: false    # Disables automatic gathering of system facts for faster execution
+  tasks:
+    - name: Return /etc/os-release to registered var
+      ansible.builtin.command: cat /etc/os-release    # Executes the command to read the OS release file
+      register: myosrelease                           # Stores the output in the variable "myosrelease"
+      changed_when: false                             # Prevents the task from being marked as changed
+
+    - name: Print OS release content
+      ansible.builtin.debug:
+        msg: "{{ myosrelease.stdout.splitlines() }}"             # Prints the contents of the OS release file
+
+    - name: Print variable from jenkins environment
+      ansible.builtin.debug:
+        msg: "{{ JENKINS_MSG }}"
+...

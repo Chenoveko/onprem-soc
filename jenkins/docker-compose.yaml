@@ -30,6 +30,15 @@ services:
       - $PWD/db_data:/var/lib/mysql  # Persist MySQL data by mounting a local directory
     networks:
       - net  # Connect the database container to the same network as Jenkins and remote_host
+  web:
+    container_name: web  # Name of the web server container
+    image: php:apache               # Official PHP Apache image
+    ports:
+      - 80:80  # Map port 8081 on the host to port 80 in the container (Nginx web server)
+    volumes:
+      - $PWD/web_data:/var/www/html  # Mount local web_data directory to the web server's document root
+    networks:
+      - net  # Connect the web server container to the same network as Jenkins and remote_host
 
 # Define a custom Docker network for inter-container communication
 networks:
