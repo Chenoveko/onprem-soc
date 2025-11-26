@@ -1,5 +1,5 @@
 # Start from the official Jenkins base image
-FROM jenkins/jenkins
+FROM jenkins/jenkins:latest
 
 # Switch to root user to install packages
 USER root
