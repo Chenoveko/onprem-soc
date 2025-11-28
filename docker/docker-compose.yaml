@@ -1,0 +1,125 @@
+services:
+  jenkins:
+    image: jenkins-ansible-image
+    container_name: jenkins-ansible-container    
+    build:
+      context: jenkins_ansible  
+    ports:
+      - 8080:8080
+    volumes:
+      - ./jenkins_home:/var/jenkins_home  
+    mem_limit: 4g
+    cpus: 1.5
+    pids_limit: 100
+    networks:
+      - net  
+    restart: unless-stopped
+    
+  remote-alpine:
+    image: remote-alpine-image 
+    container_name: remote-alpine-container        
+    build:
+      context: alpine_host 
+    volumes:
+      - ./scripts/:/tmp/
+    mem_limit: 1g
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net  
+
+  db:
+    image: mariadb:latest
+    container_name: mariadb-container    
+    environment:
+      MARIADB_ROOT_PASSWORD: "1234"  
+    volumes:
+      - ./db_data:/var/lib/mysql  
+    mem_limit: 500m
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net  
+    restart: unless-stopped
+
+  web_db:
+    depends_on:
+      - db
+    image: phpmyadmin:latest
+    container_name: web-db-container 
+    ports:
+      - 8081:80  
+    environment:
+      - PMA_ARBITRARY=1  
+    mem_limit: 500m
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net  
+    restart: unless-stopped
+    
+  ubuntu_host:
+    image: remote-ubuntu-image 
+    container_name: remote-ubuntu-container           
+    build:
+      context: ubuntu_host 
+    mem_limit: 1g
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net  
+  
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab-container
+    hostname: 'gitlab.example.com'
+    ports:
+      - 8082:80
+    volumes:
+      - './gitlab/config:/etc/gitlab'
+      - './gitlab/logs:/var/log/gitlab'
+      - './gitlab/data:/var/opt/gitlab'
+    mem_limit: 3g
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net 
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-container
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    mem_limit: 2g
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net
+    restart: unless-stopped
+  
+  grafana:
+    depends_on:
+      - prometheus
+    image: grafana/grafana:latest
+    container_name: grafana-container
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    mem_limit: 2g
+    cpus: 0.5
+    pids_limit: 50
+    networks:
+      - net
+    restart: unless-stopped
+    
+volumes:
+  grafana-storage: {}
+
+networks:
+  net:  
