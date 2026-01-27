@@ -34,7 +34,7 @@ WantedBy=multi-user.target
 EOF
 # Start and enable the BuildKit service
 sudo systemctl daemon-reload
-sudo systemctl start buildkitq
+sudo systemctl start buildkit
 sudo systemctl enable buildkit
 sudo systemctl restart buildkit
 # Verify BuildKit is running
